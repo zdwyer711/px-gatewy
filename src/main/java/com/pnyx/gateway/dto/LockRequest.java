@@ -6,5 +6,6 @@ public record LockRequest(
     String recipient,
     String requester,
     long amount,
+    long nonce,
     String signature
 ) {}

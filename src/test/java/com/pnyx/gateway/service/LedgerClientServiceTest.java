@@ -56,7 +56,7 @@ public class LedgerClientServiceTest {
 
     @Test
     public void testRequestLockProxy_SendsAuthHeader() throws Exception {
-        LockRequest request = new LockRequest("tx1", "w1", "rec1", "req1", 100L, "sig");
+        LockRequest request = new LockRequest("tx1", "w1", "rec1", "req1", 100L, 0,"sig");
         LockResponse expectedResponse = new LockResponse("tx1", true, null);
 
         mockServer.expect(requestTo("http://localhost:8081/v1/api/lock"))
@@ -103,14 +103,17 @@ public class LedgerClientServiceTest {
     @Test
     public void testGetLatestBlock_Success() throws Exception {
         // Prepare Data
-        TransactionDto tx1 = new TransactionDto("tx1", "sender", "recipient", 100, 123456L);
+        TransactionDto tx1 = new TransactionDto("tx1", "sender", "recipient", 100, "2025-12-20T22:09:49.740422598Z");
+        
+        // Ensure this constructor matches your current BlockDto definition (String vs Long timestamp)
         BlockDto expectedBlock = new BlockDto("hash123", 10L, 123456L, List.of(tx1));
 
         // Expectation
         mockServer.expect(requestTo("http://localhost:8081/v1/api/blocks/latest"))
                 .andExpect(method(HttpMethod.GET))
                 .andExpect(header(HttpHeaders.AUTHORIZATION, getBasicAuthHeader()))
-                .andRespond(withSuccess(objectMapper.writeValueAsString(expectedBlock), MediaType.APPLICATION_JSON));
+                // --- FIX BELOW: Wrap the object in List.of() ---
+                .andRespond(withSuccess(objectMapper.writeValueAsString(List.of(expectedBlock)), MediaType.APPLICATION_JSON));
 
         // Execution
         BlockDto actualBlock = ledgerClientService.getLatestBlock();
@@ -169,5 +172,21 @@ public class LedgerClientServiceTest {
                 .expectNext("BLOCK_MINED")
                 .expectNext("HEARTBEAT")
                 .verifyComplete();
+    }
+    
+    @Test
+    public void testGetWalletNonceProxy_Success() {
+        String walletId = "w123";
+        Long expectedNonce = 5L;
+
+        mockServer.expect(requestTo("http://localhost:8081/v1/api/wallets/" + walletId + "/nonce"))
+                .andExpect(method(HttpMethod.GET))
+                .andExpect(header(HttpHeaders.AUTHORIZATION, getBasicAuthHeader())) // Verifies Admin Auth to Node
+                .andRespond(withSuccess(expectedNonce.toString(), MediaType.APPLICATION_JSON));
+
+        Long actualNonce = ledgerClientService.getWalletNonceProxy(walletId);
+
+        assertEquals(expectedNonce, actualNonce);
+        mockServer.verify();
     }
 }

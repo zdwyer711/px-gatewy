@@ -88,9 +88,23 @@ public class LedgerClientService {
     }
 
     public BlockDto getLatestBlock() {
-        return restClient.get()
-                .uri("/v1/api/blocks/latest") // Assuming this endpoint exists on your Node
+    	List<BlockDto> blocks = restClient.get()
+                .uri("/v1/api/blocks/latest")
                 .retrieve()
-                .body(BlockDto.class);
+                .body(new ParameterizedTypeReference<List<BlockDto>>() {});
+
+        // Return the first block from the list, or handle empty case
+        if (blocks != null && !blocks.isEmpty()) {
+            return blocks.get(0);
+        }
+        
+        throw new RuntimeException("Ledger Node returned no blocks from /latest endpoint");
+    }
+    
+    public Long getWalletNonceProxy(String walletId) {
+        return restClient.get()
+                .uri("/v1/api/wallets/{walletId}/nonce", walletId)
+                .retrieve()
+                .body(Long.class);
     }
 }

@@ -5,5 +5,5 @@ public record TransactionDto(
     String sender,
     String recipient,
     long amount,
-    long timestamp
+    String timestamp
 ) {}

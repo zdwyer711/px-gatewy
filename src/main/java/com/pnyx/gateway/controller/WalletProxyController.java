@@ -157,4 +157,10 @@ public class WalletProxyController {
             return ResponseEntity.internalServerError().body("Error fetching history: " + e.getMessage());
         }
     }
+    
+    @GetMapping("/{walletId}/nonce")
+    public ResponseEntity<Long> getWalletNonce(@PathVariable String walletId) {
+        Long nonce = ledgerClientService.getWalletNonceProxy(walletId);
+        return ResponseEntity.ok(nonce);
+    }
 }

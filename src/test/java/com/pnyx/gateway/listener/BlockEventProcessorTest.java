@@ -1,6 +1,7 @@
 package com.pnyx.gateway.listener;
 
 import com.pnyx.gateway.dto.BlockDto;
+
 import com.pnyx.gateway.dto.TransactionDto;
 import com.pnyx.gateway.model.User;
 import com.pnyx.gateway.repository.UserRepository;
@@ -13,11 +14,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import reactor.core.publisher.Flux;
-
-import java.util.Collections;
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
-
+import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -35,6 +35,9 @@ public class BlockEventProcessorTest {
     @InjectMocks
     private BlockEventProcessor blockEventProcessor;
 
+    // --- NEW: Helper to simulate the real JSON event ---
+    private static final String JSON_EVENT_PAYLOAD = "{\"index\": 1465, \"hash\": \"00abc...\", \"txCount\": 1}";
+
     @Test
     public void testInit_ProcessesBlockMinedEvent() {
         // --- 1. Prepare Data ---
@@ -45,33 +48,31 @@ public class BlockEventProcessorTest {
         user.setUsername("testUser");
         user.setWalletId(recipientWallet);
 
-        TransactionDto tx = new TransactionDto(txId, "sender", recipientWallet, 50, 1000L);
-        BlockDto block = new BlockDto("hash", 1, 1000L, List.of(tx));
+        // Updated timestamps to Strings (ISO format)
+        TransactionDto tx = new TransactionDto(txId, "sender", recipientWallet, 50, "2025-12-20T22:09:49.740Z");
+        
+        // FIX: Constructor now likely expects String timestamp due to DTO change
+        BlockDto block = new BlockDto("hash", 1, 2025, List.of(tx));
 
         // --- 2. Mock Interactions ---
-        
-        // A. Mock the SSE Stream to emit one "BLOCK_MINED" event immediately
-        when(ledgerClient.subscribeToNodeEvents()).thenReturn(Flux.just("BLOCK_MINED"));
-
-        // B. Mock fetching the block details
+        when(ledgerClient.subscribeToNodeEvents()).thenReturn(Flux.just(JSON_EVENT_PAYLOAD));
         when(ledgerClient.getLatestBlock()).thenReturn(block);
-
-        // C. Mock finding the user who owns the wallet
         when(userRepository.findByWalletId(recipientWallet)).thenReturn(Optional.of(user));
+        // Note: You might want to mock findByWalletId for the "sender" too if testing that flow
+        when(userRepository.findByWalletId("sender")).thenReturn(Optional.empty()); 
 
         // --- 3. Execute ---
-        // Manually call init() which subscribes to the flux
         blockEventProcessor.init();
 
-        // --- 4. Verify ---
+        // --- 4. Verify with Awaitility ---
+        // We wait up to 2 seconds for the background thread to finish the call
+        await().atMost(Duration.ofSeconds(2)).untilAsserted(() -> {
+             verify(ledgerClient, times(1)).getLatestBlock();
+        });
+
+        // Now we can verify the rest safely
+        verify(userRepository).findByWalletId(recipientWallet);
         
-        // Verify we fetched the block
-        verify(ledgerClient, times(1)).getLatestBlock();
-        
-        // Verify we looked up the user
-        verify(userRepository, times(1)).findByWalletId(recipientWallet);
-        
-        // CRITICAL: Verify the WebSocket message was sent
         verify(messagingTemplate).convertAndSend(
             eq("/topic/wallets/wallet-123"), 
             contains("Received 50 coins")
@@ -80,31 +81,42 @@ public class BlockEventProcessorTest {
 
     @Test
     public void testInit_IgnoresIrrelevantEvents() {
-        // Stream emits HEARTBEAT, not BLOCK_MINED
+        // Stream emits a plain heartbeat string (does not contain "hash" or "index")
         when(ledgerClient.subscribeToNodeEvents()).thenReturn(Flux.just("HEARTBEAT"));
 
         blockEventProcessor.init();
 
-        // Ensure we did NOT try to fetch a block
         verify(ledgerClient, never()).getLatestBlock();
         verify(messagingTemplate, never()).convertAndSend(anyString(), anyString());
     }
 
     @Test
     public void testProcessNewBlock_NoUserFound() {
-        // Transaction exists, but NO user owns this wallet
+        // 1. Prepare Data
         String unknownWallet = "ghost-wallet";
-        TransactionDto tx = new TransactionDto("tx1", "sender", unknownWallet, 50, 1000L);
-        BlockDto block = new BlockDto("hash", 1, 1000L, List.of(tx));
+        TransactionDto tx = new TransactionDto("tx1", "sender", unknownWallet, 50, "2025-12-20T22:09:49.740Z");
+        
+        // Ensure BlockDto constructor matches your class (Long timestamp)
+        BlockDto block = new BlockDto("hash", 1, 2025L, List.of(tx));
 
-        when(ledgerClient.subscribeToNodeEvents()).thenReturn(Flux.just("BLOCK_MINED"));
+        // 2. Mock Interactions
+        when(ledgerClient.subscribeToNodeEvents()).thenReturn(Flux.just(JSON_EVENT_PAYLOAD));
         when(ledgerClient.getLatestBlock()).thenReturn(block);
+        
+        // Mock that neither recipient nor sender exists
         when(userRepository.findByWalletId(unknownWallet)).thenReturn(Optional.empty());
+        when(userRepository.findByWalletId("sender")).thenReturn(Optional.empty());
 
+        // 3. Execute
         blockEventProcessor.init();
 
-        // Verify we fetched block but sent NO message
-        verify(ledgerClient).getLatestBlock();
+        // 4. Verify with Awaitility
+        // Wait until getLatestBlock is called (this proves the async thread ran)
+        await().atMost(Duration.ofSeconds(2)).untilAsserted(() -> {
+             verify(ledgerClient, times(1)).getLatestBlock();
+        });
+
+        // Now verify NO message was sent
         verify(messagingTemplate, never()).convertAndSend(anyString(), anyString());
     }
 }

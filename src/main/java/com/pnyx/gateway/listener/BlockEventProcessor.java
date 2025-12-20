@@ -14,6 +14,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
 import reactor.core.Disposable; // Import this
+import reactor.core.scheduler.Schedulers;
 
 import java.util.Optional;
 
@@ -46,8 +47,8 @@ public class BlockEventProcessor {
     public void init() {
         logger.info("Starting SSE Subscription to Ledger Node...");
         
-        // Capture the Disposable
         this.subscription = ledgerClient.subscribeToNodeEvents()
+                .publishOn(Schedulers.boundedElastic()) 
                 .doOnNext(this::handleEvent)
                 .doOnError(e -> logger.error("SSE Error: ", e))
                 .retry(Long.MAX_VALUE) 
@@ -63,11 +64,11 @@ public class BlockEventProcessor {
         }
     }
 
-    private void handleEvent(String eventName) {
+    private void handleEvent(String eventPayload) {
         // ... same logic as before ...
-        logger.info("Received Node Event: {}", eventName);
+        logger.info("Received Node Event: {}", eventPayload);
 
-        if ("BLOCK_MINED".equals(eventName.trim())) {
+        if (eventPayload.contains("\"hash\"") && eventPayload.contains("\"index\"")) {
             processNewBlock();
         }
     }
@@ -79,12 +80,20 @@ public class BlockEventProcessor {
             logger.info("Processing Block #{} with {} transactions", block.index(), block.transactions().size());
 
             for (TransactionDto tx : block.transactions()) {
-                Optional<User> recipientUser = userRepository.findByWalletId(tx.recipient());
                 
-                recipientUser.ifPresent(user -> {
-                    logger.info("Alerting User {} of incoming transaction {}", user.getUsername(), tx.txid());
+             // --- 1. Alert Recipient (Existing) ---
+                userRepository.findByWalletId(tx.recipient()).ifPresent(user -> {
+                    logger.info("Alerting Recipient {} of incoming transaction {}", user.getUsername(), tx.txid());
                     String destination = "/topic/wallets/" + user.getWalletId();
                     String message = "Received " + tx.amount() + " coins!";
+                    messagingTemplate.convertAndSend(destination, message);
+                });
+
+                // --- 2. Alert Sender (NEW) ---
+                userRepository.findByWalletId(tx.sender()).ifPresent(user -> {
+                    logger.info("Alerting Sender {} of outgoing transaction {}", user.getUsername(), tx.txid());
+                    String destination = "/topic/wallets/" + user.getWalletId();
+                    String message = "Sent " + tx.amount() + " coins!";
                     messagingTemplate.convertAndSend(destination, message);
                 });
             }

@@ -146,7 +146,7 @@ public class WalletProxyControllerTest {
 
     @Test
     public void testRequestLock_Success() throws Exception {
-        LockRequest request = new LockRequest("tx1", "w1", "rec1", "req1", 50, "sig");
+        LockRequest request = new LockRequest("tx1", "w1", "rec1", "req1", 50, 1, "sig");
         LockResponse response = new LockResponse("tx1", true, null);
 
         when(ledgerClientService.requestLockProxy(any(LockRequest.class))).thenReturn(response);
@@ -160,7 +160,7 @@ public class WalletProxyControllerTest {
 
     @Test
     public void testRequestLock_ConflictFromLedger() throws Exception {
-        LockRequest request = new LockRequest("tx1", "w1", "rec1", "req1", 50, "sig");
+        LockRequest request = new LockRequest("tx1", "w1", "rec1", "req1", 50, 1, "sig");
         LockResponse conflictResponse = new LockResponse("tx1", false, "Insufficient Funds");
 
         // Simulate Ledger throwing 409 Conflict containing a JSON body
