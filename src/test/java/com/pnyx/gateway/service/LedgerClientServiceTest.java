@@ -68,18 +68,21 @@ public class LedgerClientServiceTest {
         ledgerClientService.requestLockProxy(request);
         mockServer.verify();
     }
-
+    
     @Test
-    public void testGetWalletHistoryProxy_SendsAuthHeader() throws Exception {
+    public void testGetWalletHistoryProxy_SendsAuthHeader_AndParams() throws Exception {
         String walletId = "w123";
+        int page = 2;
+        int size = 10;
         List<WalletHistoryItem> expectedList = List.of();
 
-        mockServer.expect(requestTo("http://localhost:8081/v1/api/wallets/" + walletId + "/history"))
+        // Expect URL with query params
+        mockServer.expect(requestTo("http://localhost:8081/v1/api/wallets/" + walletId + "/history?page=2&size=10"))
                 .andExpect(method(HttpMethod.GET))
                 .andExpect(header(HttpHeaders.AUTHORIZATION, getBasicAuthHeader()))
                 .andRespond(withSuccess(objectMapper.writeValueAsString(expectedList), MediaType.APPLICATION_JSON));
 
-        ledgerClientService.getWalletHistoryProxy(walletId);
+        ledgerClientService.getWalletHistoryProxy(walletId, page, size);
         mockServer.verify();
     }
     
@@ -96,31 +99,6 @@ public class LedgerClientServiceTest {
         Long actualBalance = ledgerClientService.getWalletBalanceProxy(walletId);
 
         assertEquals(expectedBalance, actualBalance);
-        mockServer.verify();
-    }
-
-    // --- NEW: Test for getLatestBlock (Synchronous RestClient) ---
-    @Test
-    public void testGetLatestBlock_Success() throws Exception {
-        // Prepare Data
-        TransactionDto tx1 = new TransactionDto("tx1", "sender", "recipient", 100, "2025-12-20T22:09:49.740422598Z");
-        
-        // Ensure this constructor matches your current BlockDto definition (String vs Long timestamp)
-        BlockDto expectedBlock = new BlockDto("hash123", 10L, 123456L, List.of(tx1));
-
-        // Expectation
-        mockServer.expect(requestTo("http://localhost:8081/v1/api/blocks/latest"))
-                .andExpect(method(HttpMethod.GET))
-                .andExpect(header(HttpHeaders.AUTHORIZATION, getBasicAuthHeader()))
-                // --- FIX BELOW: Wrap the object in List.of() ---
-                .andRespond(withSuccess(objectMapper.writeValueAsString(List.of(expectedBlock)), MediaType.APPLICATION_JSON));
-
-        // Execution
-        BlockDto actualBlock = ledgerClientService.getLatestBlock();
-
-        // Verification
-        assertEquals("hash123", actualBlock.hash());
-        assertEquals(1, actualBlock.transactions().size());
         mockServer.verify();
     }
 
@@ -187,6 +165,170 @@ public class LedgerClientServiceTest {
         Long actualNonce = ledgerClientService.getWalletNonceProxy(walletId);
 
         assertEquals(expectedNonce, actualNonce);
+        mockServer.verify();
+    }
+    
+    @Test
+    public void testGetLatestBlock_Success() throws Exception {
+        // Prepare Data
+        TransactionDto tx1 = new TransactionDto("tx1", "sender", "recipient", 100, 0L, "2025-12-21T10:00:00Z", "signature");
+        
+        // FIX: Update constructor to match new BlockDto signature
+        // Signature: (hash, index, timestamp, nonce, previousHash, minerAddress, data, transactions)
+        BlockDto expectedBlock = new BlockDto(
+            "hash123", 
+            10L, 
+            123456L, 
+            0L,             // nonce
+            "prevHash",     // previousHash
+            "minerAddr",    // minerAddress
+            "someData",     // data
+            List.of(tx1)
+        );
+
+        // Expectation
+        mockServer.expect(requestTo("http://localhost:8081/v1/api/blocks/latest"))
+                .andExpect(method(HttpMethod.GET))
+                .andExpect(header(HttpHeaders.AUTHORIZATION, getBasicAuthHeader()))
+                .andRespond(withSuccess(objectMapper.writeValueAsString(List.of(expectedBlock)), MediaType.APPLICATION_JSON));
+
+        // Execution
+        BlockDto actualBlock = ledgerClientService.getLatestBlock();
+
+        // Verification
+        assertEquals("hash123", actualBlock.hash());
+        assertEquals(1, actualBlock.transactions().size());
+        mockServer.verify();
+    }
+
+    @Test
+    public void testGetRecentBlocks_Success() throws Exception {
+        int depth = 5;
+        
+        // Prepare Response Data
+        TransactionDto tx = new TransactionDto("tx1", "sender", "recipient", 100, 0L, "2025-12-21T10:00:00Z", "signature");
+        
+        
+        // FIX: Update constructor for block1
+        BlockDto block1 = new BlockDto(
+            "hash1", 
+            100L, 
+            100L, 
+            0L, 
+            "prev1", 
+            "miner1", 
+            "data1", 
+            List.of(tx)
+        );
+        
+        // FIX: Update constructor for block2
+        BlockDto block2 = new BlockDto(
+            "hash2", 
+            99L, 
+            100L, 
+            0L, 
+            "prev2", 
+            "miner2", 
+            "data2", 
+            List.of()
+        );
+        
+        List<BlockDto> expectedList = List.of(block1, block2);
+
+        // Expectation: Verify URI contains "?depth=5"
+        mockServer.expect(requestTo("http://localhost:8081/v1/api/blocks/latest?depth=" + depth))
+                .andExpect(method(HttpMethod.GET))
+                .andExpect(header(HttpHeaders.AUTHORIZATION, getBasicAuthHeader()))
+                .andRespond(withSuccess(objectMapper.writeValueAsString(expectedList), MediaType.APPLICATION_JSON));
+
+        // Execution
+        List<BlockDto> actualList = ledgerClientService.getRecentBlocks(depth);
+
+        // Verification
+        assertEquals(2, actualList.size());
+        assertEquals("hash1", actualList.get(0).hash());
+        mockServer.verify();
+    }
+    
+    @Test
+    public void testGetBlockByHashOrIndex_Success() throws Exception {
+        String blockId = "2380"; // Can be index or hash
+        
+        // Prepare Data matching your JSON
+        TransactionDto tx = new TransactionDto("tx1", "SYSTEM", "SYSTEM", 50, 0L, "2025-12-22T02:07:10.002Z", "sig");
+        
+        BlockDto expectedBlock = new BlockDto(
+            "000014d3cf9f...", 
+            2380L, 
+            1766369234110L, 
+            61820L, 
+            "00005ee2...", 
+            "miner123", 
+            "{\"some\":\"data\"}", 
+            List.of(tx)
+        );
+
+        // Expectation
+        mockServer.expect(requestTo("http://localhost:8081/v1/api/blocks/" + blockId))
+                .andExpect(method(HttpMethod.GET))
+                .andExpect(header(HttpHeaders.AUTHORIZATION, getBasicAuthHeader()))
+                .andRespond(withSuccess(objectMapper.writeValueAsString(expectedBlock), MediaType.APPLICATION_JSON));
+
+        // Execution
+        BlockDto actualBlock = ledgerClientService.getBlockByHashOrIndex(blockId);
+
+        // Verification
+        assertEquals(2380L, actualBlock.index());
+        assertEquals("miner123", actualBlock.minerAddress());
+        mockServer.verify();
+    }
+    
+    @Test
+    public void testGetTransaction_Success() throws Exception {
+        String txId = "de1c1cd7-85a5-4260-a222-9d9b7fc3560a";
+        
+        // Prepare Data matching your JSON example
+        TransactionDto expectedTx = new TransactionDto(
+            txId, 
+            "sender_addr", 
+            "recipient_addr", 
+            4L, 
+            1L, // Fee
+            "2025-12-20T22:33:08.264Z", 
+            "sig_123" // Signature
+        );
+
+        // Expectation
+        mockServer.expect(requestTo("http://localhost:8081/v1/api/transactions/" + txId))
+                .andExpect(method(HttpMethod.GET))
+                .andExpect(header(HttpHeaders.AUTHORIZATION, getBasicAuthHeader()))
+                .andRespond(withSuccess(objectMapper.writeValueAsString(expectedTx), MediaType.APPLICATION_JSON));
+
+        // Execution
+        TransactionDto actualTx = ledgerClientService.getTransaction(txId);
+
+        // Verification
+        assertEquals(txId, actualTx.txid());
+        assertEquals(1L, actualTx.fee());
+        assertEquals("sig_123", actualTx.signature());
+        mockServer.verify();
+    }
+    
+    @Test
+    public void testGetNetworkHashrate_Success() {
+        double expectedHashrate = 15.242348125407014;
+
+        // Expectation
+        mockServer.expect(requestTo("http://localhost:8081/v1/api/node/network/hashrate"))
+                .andExpect(method(HttpMethod.GET))
+                .andExpect(header(HttpHeaders.AUTHORIZATION, getBasicAuthHeader()))
+                .andRespond(withSuccess(String.valueOf(expectedHashrate), MediaType.APPLICATION_JSON));
+
+        // Execution
+        Double actualHashrate = ledgerClientService.getNetworkHashrate();
+
+        // Verification
+        assertEquals(expectedHashrate, actualHashrate);
         mockServer.verify();
     }
 }

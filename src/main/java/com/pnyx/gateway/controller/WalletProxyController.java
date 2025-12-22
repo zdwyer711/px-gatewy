@@ -113,11 +113,6 @@ public class WalletProxyController {
             User user = userRepository.findByUsername(principal.getName())
                     .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
-            if (user.getWalletId() == null || !user.getWalletId().equals(walletId)) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body("You are not authorized to view the balance of this wallet.");
-            }
-
             // 2. Call Ledger
             Long balance = ledgerClientService.getWalletBalanceProxy(walletId);
             return ResponseEntity.ok(balance);
@@ -134,21 +129,16 @@ public class WalletProxyController {
     @GetMapping("/wallets/{walletId}/history")
     public ResponseEntity<?> getWalletHistory(
             @PathVariable String walletId,
+            @RequestParam(defaultValue = "0") int page, // NEW
+            @RequestParam(defaultValue = "20") int size, // NEW
             Principal principal
     ) {
         try {
-            // Optional Security Check: Ensure the logged-in user actually owns this wallet
-            // If you want to allow anyone to view any history (like a block explorer), remove this block.
             User user = userRepository.findByUsername(principal.getName())
                     .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-            
-            if (user.getWalletId() == null || !user.getWalletId().equals(walletId)) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body("You are not authorized to view history for this wallet.");
-            }
 
-            // Call Ledger
-            List<WalletHistoryItem> history = ledgerClientService.getWalletHistoryProxy(walletId);
+            // Pass pagination params to the service
+            List<WalletHistoryItem> history = ledgerClientService.getWalletHistoryProxy(walletId, page, size);
             return ResponseEntity.ok(history);
 
         } catch (HttpClientErrorException | HttpServerErrorException e) {

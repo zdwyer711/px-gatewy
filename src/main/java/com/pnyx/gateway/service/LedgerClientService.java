@@ -72,9 +72,13 @@ public class LedgerClientService {
                 .body(Long.class);
     }
 
-    public List<WalletHistoryItem> getWalletHistoryProxy(String walletId) {
+    public List<WalletHistoryItem> getWalletHistoryProxy(String walletId, int page, int size) {
         return restClient.get()
-                .uri("/v1/api/wallets/{walletId}/history", walletId)
+                .uri(uriBuilder -> uriBuilder
+                        .path("/v1/api/wallets/{walletId}/history")
+                        .queryParam("page", page)
+                        .queryParam("size", size)
+                        .build(walletId))
                 .retrieve()
                 .body(new ParameterizedTypeReference<List<WalletHistoryItem>>() {});
     }
@@ -106,5 +110,36 @@ public class LedgerClientService {
                 .uri("/v1/api/wallets/{walletId}/nonce", walletId)
                 .retrieve()
                 .body(Long.class);
+    }
+    
+    public List<BlockDto> getRecentBlocks(int depth) {
+        return restClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/v1/api/blocks/latest")
+                        .queryParam("depth", depth)
+                        .build())
+                .retrieve()
+                .body(new ParameterizedTypeReference<List<BlockDto>>() {});
+    }
+    
+    public BlockDto getBlockByHashOrIndex(String hashOrIndex) {
+        return restClient.get()
+                .uri("/v1/api/blocks/{id}", hashOrIndex)
+                .retrieve()
+                .body(BlockDto.class);
+    }
+    
+    public TransactionDto getTransaction(String txid) {
+        return restClient.get()
+                .uri("/v1/api/transactions/{txid}", txid)
+                .retrieve()
+                .body(TransactionDto.class);
+    }
+    
+    public Double getNetworkHashrate() {
+        return restClient.get()
+                .uri("/v1/api/node/network/hashrate")
+                .retrieve()
+                .body(Double.class);
     }
 }
