@@ -142,4 +142,22 @@ public class LedgerClientService {
                 .retrieve()
                 .body(Double.class);
     }
+    
+    public List<WalletDto> getTopWallets(int page, int size) {
+        return restClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/v1/api/wallets/top")
+                        .queryParam("page", page)
+                        .queryParam("size", size)
+                        .build())
+                .retrieve()
+                .body(new ParameterizedTypeReference<List<WalletDto>>() {});
+    }
+    
+    public List<TransactionDto> getMempoolTransactions() {
+        return restClient.get()
+                .uri("/v1/api/node/mempool")
+                .retrieve()
+                .body(new ParameterizedTypeReference<List<TransactionDto>>() {});
+    }
 }

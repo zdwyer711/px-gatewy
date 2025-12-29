@@ -1,5 +1,7 @@
 package com.pnyx.gateway.controller;
 
+import com.pnyx.gateway.dto.TransactionDto;
+
 import com.pnyx.gateway.service.LedgerClientService;
 import com.pnyx.gateway.util.JwtUtil;
 import org.junit.jupiter.api.Test;
@@ -14,7 +16,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.util.List;
 
 @WebMvcTest(NodeController.class)
 @AutoConfigureMockMvc(addFilters = false)
@@ -42,5 +47,22 @@ public class NodeControllerTest {
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(content().string(String.valueOf(mockHashrate)));
+    }
+    
+    @Test
+    public void testGetMempool_Success() throws Exception {
+        // Mock Data
+        TransactionDto tx = new TransactionDto("tx1", "s", "r", 10, 1, "time", "sig");
+        List<TransactionDto> mockMempool = List.of(tx);
+
+        // Mock Service
+        when(ledgerClientService.getMempoolTransactions()).thenReturn(mockMempool);
+
+        // Execute & Verify
+        mockMvc.perform(get("/api/proxy/node/mempool")
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].txid").value("tx1"));
     }
 }

@@ -153,4 +153,13 @@ public class WalletProxyController {
         Long nonce = ledgerClientService.getWalletNonceProxy(walletId);
         return ResponseEntity.ok(nonce);
     }
+    
+    @GetMapping("/wallets/top")
+    public ResponseEntity<List<WalletDto>> getTopWallets(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        
+        List<WalletDto> richList = ledgerClientService.getTopWallets(page, size);
+        return ResponseEntity.ok(richList);
+    }
 }

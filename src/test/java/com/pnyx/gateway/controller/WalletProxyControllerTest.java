@@ -1,9 +1,6 @@
 package com.pnyx.gateway.controller;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-
-import java.util.List;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -16,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
@@ -35,7 +33,7 @@ import com.pnyx.gateway.dto.CommitRequest;
 import com.pnyx.gateway.dto.CreateWalletRequest;
 import com.pnyx.gateway.dto.LockRequest;
 import com.pnyx.gateway.dto.LockResponse;
-import com.pnyx.gateway.dto.WalletHistoryItem;
+import com.pnyx.gateway.dto.WalletDto;
 import com.pnyx.gateway.model.User;
 import com.pnyx.gateway.repository.UserRepository;
 import com.pnyx.gateway.service.LedgerClientService;
@@ -275,6 +273,25 @@ public class WalletProxyControllerTest {
                 .principal(() -> username))
                 .andExpect(status().isOk())
                 .andExpect(content().string("5000"));
+    }
+    
+    @Test
+    public void testGetTopWallets_Success() throws Exception {
+        // Mock Data
+        WalletDto w1 = new WalletDto("w1", "key1", 100L, 0L);
+        List<WalletDto> mockList = List.of(w1);
+
+        // Mock Service
+        when(ledgerClientService.getTopWallets(0, 5)).thenReturn(mockList);
+
+        // Execute & Verify
+        mockMvc.perform(get("/api/proxy/wallets/top")
+                .param("page", "0")
+                .param("size", "5")
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].walletId").value("w1"))
+                .andExpect(jsonPath("$[0].balance").value(100));
     }
 
 }

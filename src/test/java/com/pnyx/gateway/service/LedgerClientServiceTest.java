@@ -1,7 +1,6 @@
 package com.pnyx.gateway.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -18,7 +17,6 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.client.RestClientTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
@@ -30,6 +28,7 @@ import com.pnyx.gateway.dto.BlockDto;
 import com.pnyx.gateway.dto.LockRequest;
 import com.pnyx.gateway.dto.LockResponse;
 import com.pnyx.gateway.dto.TransactionDto;
+import com.pnyx.gateway.dto.WalletDto;
 import com.pnyx.gateway.dto.WalletHistoryItem;
 
 import reactor.core.publisher.Flux;
@@ -329,6 +328,53 @@ public class LedgerClientServiceTest {
 
         // Verification
         assertEquals(expectedHashrate, actualHashrate);
+        mockServer.verify();
+    }
+    
+    @Test
+    public void testGetTopWallets_Success() throws Exception {
+        int page = 0;
+        int size = 5;
+
+        // Prepare Data
+        WalletDto w1 = new WalletDto("wallet_A", "pub_A", 5000L, 1L);
+        WalletDto w2 = new WalletDto("wallet_B", "pub_B", 3000L, 2L);
+        List<WalletDto> expectedList = List.of(w1, w2);
+
+        // Expectation
+        mockServer.expect(requestTo("http://localhost:8081/v1/api/wallets/top?page=0&size=5"))
+                .andExpect(method(HttpMethod.GET))
+                .andExpect(header(HttpHeaders.AUTHORIZATION, getBasicAuthHeader()))
+                .andRespond(withSuccess(objectMapper.writeValueAsString(expectedList), MediaType.APPLICATION_JSON));
+
+        // Execution
+        List<WalletDto> actualList = ledgerClientService.getTopWallets(page, size);
+
+        // Verification
+        assertEquals(2, actualList.size());
+        assertEquals(5000L, actualList.get(0).balance());
+        mockServer.verify();
+    }
+    
+    @Test
+    public void testGetMempoolTransactions_Success() throws Exception {
+        // Prepare Data
+        TransactionDto tx1 = new TransactionDto("tx1", "sender", "recipient", 100, 1, "2025-12-20T22:33:08.264Z", "sig1");
+        TransactionDto tx2 = new TransactionDto("tx2", "sender2", "recipient2", 50, 1, "2025-12-20T22:34:00.000Z", "sig2");
+        List<TransactionDto> expectedList = List.of(tx1, tx2);
+
+        // Expectation
+        mockServer.expect(requestTo("http://localhost:8081/v1/api/node/mempool"))
+                .andExpect(method(HttpMethod.GET))
+                .andExpect(header(HttpHeaders.AUTHORIZATION, getBasicAuthHeader()))
+                .andRespond(withSuccess(objectMapper.writeValueAsString(expectedList), MediaType.APPLICATION_JSON));
+
+        // Execution
+        List<TransactionDto> actualList = ledgerClientService.getMempoolTransactions();
+
+        // Verification
+        assertEquals(2, actualList.size());
+        assertEquals("tx1", actualList.get(0).txid());
         mockServer.verify();
     }
 }
