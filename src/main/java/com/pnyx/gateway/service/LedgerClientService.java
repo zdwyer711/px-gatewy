@@ -160,4 +160,18 @@ public class LedgerClientService {
                 .retrieve()
                 .body(new ParameterizedTypeReference<List<TransactionDto>>() {});
     }
+    
+    public List<String> getPeers() {
+        return restClient.get()
+                .uri("/v1/api/node/peers")
+                .retrieve()
+                .body(new ParameterizedTypeReference<List<String>>() {});
+    }
+    
+    public NodeStatusDto getNodeStatus() {
+        return restClient.get()
+                .uri("/v1/api/node/status")
+                .retrieve()
+                .body(NodeStatusDto.class);
+    }
 }

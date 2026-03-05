@@ -54,7 +54,7 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .authorizeHttpRequests(auth -> auth
                 // Allow Auth and Status endpoints public access
-                .requestMatchers("/api/auth/**", "/api/status", "/ws/**").permitAll()
+                .requestMatchers("/api/auth/**", "/api/status", "/ws/**", "/info/**").permitAll()
                 .anyRequest().authenticated()
             )
             // Register JSON Error Handlers

@@ -1,5 +1,6 @@
 package com.pnyx.gateway.controller;
 
+import com.pnyx.gateway.dto.NodeStatusDto;
 import com.pnyx.gateway.dto.TransactionDto;
 import com.pnyx.gateway.service.LedgerClientService;
 
@@ -30,5 +31,17 @@ public class NodeController {
     public ResponseEntity<List<TransactionDto>> getMempool() {
         List<TransactionDto> mempool = ledgerClientService.getMempoolTransactions();
         return ResponseEntity.ok(mempool);
+    }
+    
+    @GetMapping("/peers")
+    public ResponseEntity<List<String>> getPeers() {
+        List<String> peers = ledgerClientService.getPeers();
+        return ResponseEntity.ok(peers);
+    }
+    
+    @GetMapping("/status")
+    public ResponseEntity<NodeStatusDto> getNodeStatus() {
+        NodeStatusDto status = ledgerClientService.getNodeStatus();
+        return ResponseEntity.ok(status);
     }
 }

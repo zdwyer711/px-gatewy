@@ -27,6 +27,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pnyx.gateway.dto.BlockDto;
 import com.pnyx.gateway.dto.LockRequest;
 import com.pnyx.gateway.dto.LockResponse;
+import com.pnyx.gateway.dto.NodeStatusDto;
 import com.pnyx.gateway.dto.TransactionDto;
 import com.pnyx.gateway.dto.WalletDto;
 import com.pnyx.gateway.dto.WalletHistoryItem;
@@ -375,6 +376,53 @@ public class LedgerClientServiceTest {
         // Verification
         assertEquals(2, actualList.size());
         assertEquals("tx1", actualList.get(0).txid());
+        mockServer.verify();
+    }
+    
+    @Test
+    public void testGetPeers_Success() throws Exception {
+        // Prepare Data
+        List<String> expectedPeers = List.of("192.168.1.5:8080", "10.0.0.4:8080");
+
+        // Expectation
+        mockServer.expect(requestTo("http://localhost:8081/v1/api/node/peers"))
+                .andExpect(method(HttpMethod.GET))
+                .andExpect(header(HttpHeaders.AUTHORIZATION, getBasicAuthHeader()))
+                .andRespond(withSuccess(objectMapper.writeValueAsString(expectedPeers), MediaType.APPLICATION_JSON));
+
+        // Execution
+        List<String> actualPeers = ledgerClientService.getPeers();
+
+        // Verification
+        assertEquals(2, actualPeers.size());
+        assertEquals("192.168.1.5:8080", actualPeers.get(0));
+        mockServer.verify();
+    }
+    
+    @Test
+    public void testGetNodeStatus_Success() throws Exception {
+        // Prepare Data matching your JSON
+        NodeStatusDto expectedStatus = new NodeStatusDto(
+            "node_123", 
+            166L, 
+            "hash_abc", 
+            0, 
+            0, 
+            1767412697586L
+        );
+
+        // Expectation
+        mockServer.expect(requestTo("http://localhost:8081/v1/api/node/status"))
+                .andExpect(method(HttpMethod.GET))
+                .andExpect(header(HttpHeaders.AUTHORIZATION, getBasicAuthHeader()))
+                .andRespond(withSuccess(objectMapper.writeValueAsString(expectedStatus), MediaType.APPLICATION_JSON));
+
+        // Execution
+        NodeStatusDto actualStatus = ledgerClientService.getNodeStatus();
+
+        // Verification
+        assertEquals("node_123", actualStatus.nodeId());
+        assertEquals(166L, actualStatus.currentBlockHeight());
         mockServer.verify();
     }
 }

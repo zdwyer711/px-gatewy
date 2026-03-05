@@ -80,8 +80,8 @@ public class BlockEventProcessor {
             logger.info("Processing Block #{} with {} transactions", block.index(), block.transactions().size());
 
             for (TransactionDto tx : block.transactions()) {
-                
-             // --- 1. Alert Recipient (Existing) ---
+            	logger.info("Processing sender #{} and recipient {} ", tx.sender(), tx.recipient());
+                // --- 1. Alert Recipient (Existing) ---
                 userRepository.findByWalletId(tx.recipient()).ifPresent(user -> {
                     logger.info("Alerting Recipient {} of incoming transaction {}", user.getUsername(), tx.txid());
                     String destination = "/topic/wallets/" + user.getWalletId();
