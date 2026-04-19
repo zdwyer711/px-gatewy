@@ -53,8 +53,7 @@ public class SecurityConfig {
             .csrf(AbstractHttpConfigurer::disable)
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .authorizeHttpRequests(auth -> auth
-                // Allow Auth and Status endpoints public access
-                .requestMatchers("/api/auth/**", "/api/status", "/ws/**", "/info/**").permitAll()
+                .requestMatchers("/api/auth/**", "/api/status", "/ws/**", "/info/**", "/api/vehicles/*/history").permitAll()
                 .anyRequest().authenticated()
             )
             // Register JSON Error Handlers
@@ -73,8 +72,12 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // Allow localhost:5173 (React) and localhost:8080 (Self/Swagger)
-        configuration.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:8080"));
+        configuration.setAllowedOrigins(List.of(
+            "http://localhost:5173",
+            "http://localhost:8080",
+            "http://localhost:8081",
+            "http://localhost:19006"
+        ));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         configuration.setAllowCredentials(true);

@@ -7,5 +7,7 @@ public record LockRequest(
     String requester,
     long amount,
     long nonce,
-    String signature
+    String signature,
+    String type,
+    String metadata
 ) {}

@@ -17,6 +17,7 @@ public class User {
     private String email;
     private boolean active = true;
     private String walletId;
+    private String role = "OWNER";
 
     // 1. No-Args Constructor (Required for MongoDB)
     public User() {
@@ -48,5 +49,8 @@ public class User {
     
     public String getWalletId() { return walletId; }
     public void setWalletId(String walletId) { this.walletId = walletId; }
-    
+
+    public String getRole() { return role; }
+    public void setRole(String role) { this.role = role; }
+
 }

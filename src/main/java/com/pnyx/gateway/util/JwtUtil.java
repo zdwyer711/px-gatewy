@@ -24,8 +24,13 @@ public class JwtUtil {
 
     // 1. Generate Token
     public String generateToken(String username) {
+        return generateToken(username, "OWNER");
+    }
+
+    public String generateToken(String username, String role) {
         return Jwts.builder()
                 .subject(username)
+                .claim("role", role)
                 .issuedAt(new Date(System.currentTimeMillis()))
                 .expiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
                 .signWith(KEY)
@@ -35,6 +40,10 @@ public class JwtUtil {
     // 2. Extract Username
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
+    }
+
+    public String extractRole(String token) {
+        return extractClaim(token, claims -> claims.get("role", String.class));
     }
 
     // 3. Validate Token

@@ -60,6 +60,7 @@ public class AuthController {
         user.setPassword(passwordEncoder.encode(registerRequest.password()));
         user.setEmail(registerRequest.email());
         user.setActive(true);
+        user.setRole(registerRequest.role() != null ? registerRequest.role() : "OWNER");
 
         userRepository.save(user);
 
@@ -73,16 +74,14 @@ public class AuthController {
                 new UsernamePasswordAuthenticationToken(authRequest.username(), authRequest.password())
         );
 
-        // 2. Load User Details using your custom service
-        final UserDetails userDetails = userDetailsService.loadUserByUsername(authRequest.username());
-        
-        // 3. Generate Access Token (Short-lived)
-        final String accessToken = jwtUtil.generateToken(userDetails.getUsername());
-        
-        // 4. Generate Refresh Token (Long-lived)
+        // 2. Load User and generate tokens
+        User user = userRepository.findByUsername(authRequest.username())
+                .orElseThrow(() -> new org.springframework.security.core.userdetails.UsernameNotFoundException("User not found"));
+
+        final String accessToken = jwtUtil.generateToken(user.getUsername(), user.getRole());
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(authRequest.username());
 
-        return ResponseEntity.ok(new JwtResponse(accessToken, refreshToken.getToken()));
+        return ResponseEntity.ok(new JwtResponse(accessToken, refreshToken.getToken(), "Bearer", user.getRole(), user.getWalletId()));
     }
 
     @PostMapping("/refresh")

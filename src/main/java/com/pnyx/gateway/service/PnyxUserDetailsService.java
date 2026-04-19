@@ -7,7 +7,8 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
+import java.util.List;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 @Service
 public class PnyxUserDetailsService implements UserDetailsService {
@@ -25,13 +26,12 @@ public class PnyxUserDetailsService implements UserDetailsService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username));
 
-        // 2. Return a Spring Security User object
-        // The last parameter (new ArrayList<>()) is for Authorities/Roles. 
-        // We are leaving it empty for now, but you can add roles here later.
+        // 2. Return a Spring Security User object with role authority
+        String role = user.getRole() != null ? user.getRole() : "OWNER";
         return new org.springframework.security.core.userdetails.User(
                 user.getUsername(),
                 user.getPassword(),
-                new ArrayList<>()
+                List.of(new SimpleGrantedAuthority("ROLE_" + role))
         );
     }
 }
