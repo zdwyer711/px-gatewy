@@ -37,6 +37,21 @@ public class SecurityConfigTest {
     @MockitoBean
     private JwtUtil jwtUtil;
 
+    @MockitoBean
+    private com.pnyx.gateway.repository.UserRepository userRepository;
+
+    @MockitoBean
+    private com.pnyx.gateway.repository.RefreshTokenRepository refreshTokenRepository;
+
+    @MockitoBean
+    private com.pnyx.gateway.repository.ServiceEntryRepository serviceEntryRepository;
+
+    @MockitoBean
+    private com.pnyx.gateway.repository.ImageRepository imageRepository;
+
+    @MockitoBean
+    private com.pnyx.gateway.repository.VehicleRepository vehicleRepository;
+
     // ==========================================
     // BEAN WIRING TESTS
     // ==========================================
