@@ -5,7 +5,9 @@ public record TransactionDto(
     String sender,
     String recipient,
     long amount,
-    long fee,         // NEW
-    String timestamp, // String (ISO-8601)
-    String signature  // NEW
+    long fee,
+    String timestamp,
+    String signature,
+    String type,
+    String metadata
 ) {}

@@ -2,18 +2,20 @@ package com.pnyx.gateway.listener;
 
 import com.pnyx.gateway.dto.BlockDto;
 import com.pnyx.gateway.dto.TransactionDto;
+import com.pnyx.gateway.model.ServiceEntry;
 import com.pnyx.gateway.model.User;
+import com.pnyx.gateway.repository.ServiceEntryRepository;
 import com.pnyx.gateway.repository.UserRepository;
 import com.pnyx.gateway.service.LedgerClientService;
 
 import jakarta.annotation.PostConstruct;
-import jakarta.annotation.PreDestroy; // Import this
+import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
-import reactor.core.Disposable; // Import this
+import reactor.core.Disposable;
 import reactor.core.scheduler.Schedulers;
 
 import java.util.Optional;
@@ -30,16 +32,18 @@ public class BlockEventProcessor {
 
     private final LedgerClientService ledgerClient;
     private final UserRepository userRepository;
+    private final ServiceEntryRepository serviceEntryRepository;
     private final SimpMessagingTemplate messagingTemplate;
-    
-    // Hold a reference to the active subscription
-    private Disposable subscription; 
 
-    public BlockEventProcessor(LedgerClientService ledgerClient, 
+    private Disposable subscription;
+
+    public BlockEventProcessor(LedgerClientService ledgerClient,
                                UserRepository userRepository,
+                               ServiceEntryRepository serviceEntryRepository,
                                SimpMessagingTemplate messagingTemplate) {
         this.ledgerClient = ledgerClient;
         this.userRepository = userRepository;
+        this.serviceEntryRepository = serviceEntryRepository;
         this.messagingTemplate = messagingTemplate;
     }
 
@@ -96,6 +100,15 @@ public class BlockEventProcessor {
                     String message = "Sent " + tx.amount() + " coins!";
                     messagingTemplate.convertAndSend(destination, message);
                 });
+
+                // --- 3. Confirm SERVICE_ENTRY ---
+                if ("SERVICE_ENTRY".equals(tx.type())) {
+                    serviceEntryRepository.findByBlockchainTxid(tx.txid()).ifPresent(entry -> {
+                        logger.info("Confirming SERVICE_ENTRY {} for vin {}", tx.txid(), entry.getVin());
+                        entry.setStatus("CONFIRMED");
+                        serviceEntryRepository.save(entry);
+                    });
+                }
             }
         } catch (Exception e) {
             logger.error("Error processing block", e);
