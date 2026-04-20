@@ -53,15 +53,35 @@ public class VehicleController {
     @GetMapping("/{vin}/history")
     public ResponseEntity<?> getVehicleHistory(@PathVariable String vin) {
         return vehicleService.getVehicleByVin(vin)
-                .map(v -> ResponseEntity.ok(Map.of(
-                        "vin", v.getVin(),
-                        "make", v.getMake(),
-                        "model", v.getModel(),
-                        "year", v.getYear(),
-                        "registrationTxid", v.getRegistrationTxid() != null ? v.getRegistrationTxid() : "",
-                        "currentOdometer", v.getCurrentOdometer(),
-                        "serviceHistory", serviceEntryService.getEntriesByVin(v.getVin())
-                )))
+                .map(v -> {
+                    List<Map<String, Object>> history = serviceEntryService.getEntriesByVin(v.getVin())
+                            .stream()
+                            .map(e -> {
+                                Map<String, Object> item = new java.util.LinkedHashMap<>();
+                                item.put("serviceType", e.getServiceType());
+                                item.put("description", e.getDescription() != null ? e.getDescription() : "");
+                                item.put("odometerReading", e.getOdometerReading());
+                                item.put("cost", e.getCost());
+                                item.put("submitterName", e.getSubmitterUsername());
+                                item.put("blockchainTxid", e.getBlockchainTxid() != null ? e.getBlockchainTxid() : "");
+                                item.put("dataHash", e.getDataHash() != null ? e.getDataHash() : "");
+                                item.put("status", e.getStatus());
+                                item.put("serviceDate", e.getServiceDate() != null ? e.getServiceDate() : "");
+                                item.put("imageIds", e.getImageIds() != null ? e.getImageIds() : List.of());
+                                return item;
+                            })
+                            .collect(java.util.stream.Collectors.toList());
+
+                    Map<String, Object> response = new java.util.LinkedHashMap<>();
+                    response.put("vin", v.getVin());
+                    response.put("make", v.getMake());
+                    response.put("model", v.getModel());
+                    response.put("year", v.getYear());
+                    response.put("registrationTxid", v.getRegistrationTxid() != null ? v.getRegistrationTxid() : "");
+                    response.put("currentOdometer", v.getCurrentOdometer());
+                    response.put("serviceHistory", history);
+                    return ResponseEntity.ok(response);
+                })
                 .<ResponseEntity<?>>map(r -> r)
                 .orElse(ResponseEntity.notFound().build());
     }
