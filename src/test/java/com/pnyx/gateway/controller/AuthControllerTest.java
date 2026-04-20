@@ -75,7 +75,7 @@ public class AuthControllerTest {
 
     @Test
     public void testRegisterUser_Success() throws Exception {
-        RegisterRequest request = new RegisterRequest("newuser", "password123", "test@pnyx.com");
+        RegisterRequest request = new RegisterRequest("newuser", "password123", "test@pnyx.com", "ROLE_USER");
 
         // Mock DB: Username does NOT exist (Optional.empty())
         when(userRepository.findByUsername(request.username())).thenReturn(Optional.empty());
@@ -92,7 +92,7 @@ public class AuthControllerTest {
 
     @Test
     public void testRegisterUser_UsernameTaken() throws Exception {
-        RegisterRequest request = new RegisterRequest("existingUser", "password123", "test@pnyx.com");
+        RegisterRequest request = new RegisterRequest("existingUser", "password123", "test@pnyx.com", "ROLE_USER");
 
         // Mock DB: Username DOES exist
         when(userRepository.findByUsername(request.username())).thenReturn(Optional.of(new User()));
@@ -117,14 +117,16 @@ public class AuthControllerTest {
         String fakeRefreshToken = "refresh-token-uuid";
 
         // Mocks for successful login flow
-        UserDetails mockUserDetails = mock(UserDetails.class);
-        when(mockUserDetails.getUsername()).thenReturn("validUser");
+        User mockUser = new User();
+        mockUser.setUsername("validUser");
+        mockUser.setRole("ROLE_USER");
+        mockUser.setWalletId("wallet-123");
 
         RefreshToken mockRefreshToken = new RefreshToken();
         mockRefreshToken.setToken(fakeRefreshToken);
 
-        when(userDetailsService.loadUserByUsername("validUser")).thenReturn(mockUserDetails);
-        when(jwtUtil.generateToken(mockUserDetails.getUsername())).thenReturn(fakeAccessToken);
+        when(userRepository.findByUsername("validUser")).thenReturn(Optional.of(mockUser));
+        when(jwtUtil.generateToken("validUser", "ROLE_USER")).thenReturn(fakeAccessToken);
         when(refreshTokenService.createRefreshToken("validUser")).thenReturn(mockRefreshToken);
 
         mockMvc.perform(post("/api/auth/login")
@@ -132,7 +134,9 @@ public class AuthControllerTest {
                 .content(objectMapper.writeValueAsString(loginRequest)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.accessToken").value(fakeAccessToken))
-                .andExpect(jsonPath("$.refreshToken").value(fakeRefreshToken));
+                .andExpect(jsonPath("$.refreshToken").value(fakeRefreshToken))
+                .andExpect(jsonPath("$.role").value("ROLE_USER"))
+                .andExpect(jsonPath("$.walletId").value("wallet-123"));
     }
 
     @Test

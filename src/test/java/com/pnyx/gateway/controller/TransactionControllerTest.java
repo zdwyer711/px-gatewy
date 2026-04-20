@@ -49,7 +49,9 @@ public class TransactionControllerTest {
                 100L,       
                 1L,         
                 "2025-12-20T22:33:08.264Z",
-                "sig_abc"   
+                "sig_abc",
+                "TRANSFER",
+                "none"
         );
 
         when(ledgerClientService.getTransaction(txId)).thenReturn(mockTx);

@@ -56,7 +56,7 @@ public class LedgerClientServiceTest {
 
     @Test
     public void testRequestLockProxy_SendsAuthHeader() throws Exception {
-        LockRequest request = new LockRequest("tx1", "w1", "rec1", "req1", 100L, 0,"sig");
+        LockRequest request = new LockRequest("tx1", "w1", "rec1", "req1", 100L, 0,"sig", "LOCK", "none");
         LockResponse expectedResponse = new LockResponse("tx1", true, null);
 
         mockServer.expect(requestTo("http://localhost:8081/v1/api/lock"))
@@ -171,7 +171,7 @@ public class LedgerClientServiceTest {
     @Test
     public void testGetLatestBlock_Success() throws Exception {
         // Prepare Data
-        TransactionDto tx1 = new TransactionDto("tx1", "sender", "recipient", 100, 0L, "2025-12-21T10:00:00Z", "signature");
+        TransactionDto tx1 = new TransactionDto("tx1", "sender", "recipient", 100, 0L, "2025-12-21T10:00:00Z", "signature", "TRANSFER", "none");
         
         // FIX: Update constructor to match new BlockDto signature
         // Signature: (hash, index, timestamp, nonce, previousHash, minerAddress, data, transactions)
@@ -206,7 +206,7 @@ public class LedgerClientServiceTest {
         int depth = 5;
         
         // Prepare Response Data
-        TransactionDto tx = new TransactionDto("tx1", "sender", "recipient", 100, 0L, "2025-12-21T10:00:00Z", "signature");
+        TransactionDto tx = new TransactionDto("tx1", "sender", "recipient", 100, 0L, "2025-12-21T10:00:00Z", "signature", "TRANSFER", "none");
         
         
         // FIX: Update constructor for block1
@@ -255,7 +255,7 @@ public class LedgerClientServiceTest {
         String blockId = "2380"; // Can be index or hash
         
         // Prepare Data matching your JSON
-        TransactionDto tx = new TransactionDto("tx1", "SYSTEM", "SYSTEM", 50, 0L, "2025-12-22T02:07:10.002Z", "sig");
+        TransactionDto tx = new TransactionDto("tx1", "SYSTEM", "SYSTEM", 50, 0L, "2025-12-22T02:07:10.002Z", "sig", "TRANSFER", "none");
         
         BlockDto expectedBlock = new BlockDto(
             "000014d3cf9f...", 
@@ -295,7 +295,9 @@ public class LedgerClientServiceTest {
             4L, 
             1L, // Fee
             "2025-12-20T22:33:08.264Z", 
-            "sig_123" // Signature
+            "sig_123", // Signature
+            "TRANSFER",
+            "none"
         );
 
         // Expectation
@@ -360,8 +362,8 @@ public class LedgerClientServiceTest {
     @Test
     public void testGetMempoolTransactions_Success() throws Exception {
         // Prepare Data
-        TransactionDto tx1 = new TransactionDto("tx1", "sender", "recipient", 100, 1, "2025-12-20T22:33:08.264Z", "sig1");
-        TransactionDto tx2 = new TransactionDto("tx2", "sender2", "recipient2", 50, 1, "2025-12-20T22:34:00.000Z", "sig2");
+        TransactionDto tx1 = new TransactionDto("tx1", "sender", "recipient", 100, 1, "2025-12-20T22:33:08.264Z", "sig1", "TRANSFER", "none");
+        TransactionDto tx2 = new TransactionDto("tx2", "sender2", "recipient2", 50, 1, "2025-12-20T22:34:00.000Z", "sig2", "TRANSFER", "none");
         List<TransactionDto> expectedList = List.of(tx1, tx2);
 
         // Expectation

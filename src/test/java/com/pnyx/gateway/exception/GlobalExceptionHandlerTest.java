@@ -54,7 +54,7 @@ public class GlobalExceptionHandlerTest {
     @Test
     public void testValidationException_ReturnsJson() throws Exception {
         // Create request with invalid password (too short)
-        RegisterRequest request = new RegisterRequest("user", "123", "email@test.com");
+        RegisterRequest request = new RegisterRequest("user", "123", "email@test.com", "ROLE_USER");
 
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)

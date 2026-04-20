@@ -53,7 +53,7 @@ public class NodeControllerTest {
     @Test
     public void testGetMempool_Success() throws Exception {
         // Mock Data
-        TransactionDto tx = new TransactionDto("tx1", "s", "r", 10, 1, "time", "sig");
+        TransactionDto tx = new TransactionDto("tx1", "s", "r", 10, 1, "time", "sig", "TRANSFER", "none");
         List<TransactionDto> mockMempool = List.of(tx);
 
         // Mock Service

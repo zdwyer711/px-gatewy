@@ -51,7 +51,7 @@ public class BlockEventProcessorTest {
         user.setWalletId(recipientWallet);
 
         // Transaction uses String timestamp
-        TransactionDto tx = new TransactionDto(txId, "sender", recipientWallet, 50, 0L,  "2025-12-20T22:09:49.740Z", "sig");
+        TransactionDto tx = new TransactionDto(txId, "sender", recipientWallet, 50, 0L,  "2025-12-20T22:09:49.740Z", "sig", "TRANSFER", "none");
         // FIX: Updated Constructor to match 8-parameter signature
         // (hash, index, timestamp, nonce, previousHash, minerAddress, data, transactions)
         BlockDto block = new BlockDto(
@@ -109,7 +109,7 @@ public class BlockEventProcessorTest {
     public void testProcessNewBlock_NoUserFound() {
         // 1. Prepare Data
         String unknownWallet = "ghost-wallet";
-        TransactionDto tx = new TransactionDto("tx1", "sender",  unknownWallet, 100, 0L, "2025-12-21T10:00:00Z", "signature");
+        TransactionDto tx = new TransactionDto("tx1", "sender",  unknownWallet, 100, 0L, "2025-12-21T10:00:00Z", "signature", "TRANSFER", "none");
         
         // FIX: Updated Constructor here as well
         BlockDto block = new BlockDto(
