@@ -3,7 +3,7 @@
 # Configuration
 APP_NAME="flex-gateway"
 IMAGE_NAME="px-gateway:staging"
-PORT=8082
+PORT=8083
 
 # Colors
 GREEN='\033[0;32m'
@@ -40,7 +40,7 @@ docker stop $APP_NAME 2>/dev/null || true
 docker rm $APP_NAME 2>/dev/null || true
 
 docker run -d \
-  -p $PORT:8082 \
+  -p $PORT:8083 \
   --name $APP_NAME \
   --restart unless-stopped \
   --add-host=host.docker.internal:host-gateway \
