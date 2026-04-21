@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Configuration
-APP_NAME="flex-gateway"
+APP_NAME="px-gateway"
 IMAGE_NAME="px-gateway:staging"
 PORT=8083
 
